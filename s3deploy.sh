@@ -37,8 +37,8 @@ if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployment
 if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
 
 if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
-    if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; fi
-    if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; fi
+    if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
+    if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
 
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
