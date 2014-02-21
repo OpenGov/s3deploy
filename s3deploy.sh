@@ -37,8 +37,8 @@ if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployment
 if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
 
 if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
-    : ${AWS_ACCESS_KEY_ID:?"Need to set AWS_ACCESS_KEY_ID before deploying to S3"}
-    #if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; fi
+    if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; fi
+    if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; fi
 
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
@@ -46,7 +46,7 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 
     # Official AWS CLI is used for uploading the tarball to S3 
     sudo pip install --download-cache $HOME/.pip-cache awscli
-    #aws s3 cp --acl private $TARBALL_TARGET_PATH $AWS_S3_TARGET_PATH
+    aws s3 cp --acl private $TARBALL_TARGET_PATH $AWS_S3_TARGET_PATH
     
     # Only create tag on specified branch
     if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
