@@ -46,7 +46,7 @@ set -x
 
 # Tar the build directory while excluding version control file
 cd $TRAVIS_BUILD_DIR
-tar -c -z --exclude-vcs -f $TARBALL_TARGET_PATH .
+tar --exclude-vcs -c -z -f $TARBALL_TARGET_PATH .
 
 # Official AWS CLI is used for uploading the tarball to S3
 sudo pip install --download-cache $HOME/.pip-cache awscli
