@@ -26,7 +26,7 @@
 #   TRAVIS_BUILD_DIR      : The absolute path to the directory where the repository 
 
 # Enable to exit on any failure
-set -e
+set -e -x
 
 # Check if required environment variables are set
 if [ -z $GIT_REPO_NAME ]; then export GIT_REPO_NAME=`basename $TRAVIS_REPO_SLUG`; fi
@@ -37,8 +37,8 @@ if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployment
 if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
 
 if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
-    ${AWS_ACCESS_KEY_ID:?"Need to set AWS_ACCESS_KEY_ID before deploying to S3"}
-    ${AWS_SECRET_ACCESS_KEY:?"Need to set AWS_SECRET_ACCESS_KEY before deploying to S3"}
+    : ${AWS_ACCESS_KEY_ID:?"Need to set AWS_ACCESS_KEY_ID before deploying to S3"}
+    : ${AWS_SECRET_ACCESS_KEY:?"Need to set AWS_SECRET_ACCESS_KEY before deploying to S3"}
     
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
