@@ -51,7 +51,7 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     # Only create tag on specified branch
     if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
 	git config --global user.email "alerts+travis@opengov.com"
-	git config --global user.name "Travis-CI"
+	git config --global user.name "og-travis"
 	git tag -a $GIT_TAG_NAME -m "Pull request: $TRAVIS_PULL_REQUEST -- Travis build number: $TRAVIS_BUILD_NUMBER"
 	git push origin $GIT_TAG_NAME;
     fi
