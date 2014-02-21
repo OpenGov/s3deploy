@@ -46,7 +46,7 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 
     # Official AWS CLI is used for uploading the tarball to S3 
     sudo pip install --download-cache $HOME/.pip-cache awscli
-    aws s3 cp --acl private $TARBALL_TARGET_PATH $AWS_S3_TARGET_PATH
+    #aws s3 cp --acl private $TARBALL_TARGET_PATH $AWS_S3_TARGET_PATH
     
     # Only create tag on specified branch
     if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
