@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 # Copyright (c) OpenGov 2014
 ############################
 # Simple script that tarballs the build directory and puts it to s3. The script
@@ -10,10 +10,10 @@
 # When tarballing the build, it is expected that the current working directory
 # be inside the build directory
 #
-# It expects the following environment variables to be set:
+# It expects the followin            g environment variables to be set:
 #   TARBALL_TARGET_PATH   : The target path for the tarball to be created
 #   GIT_TAG_NAME          : The name of the git tag you want to create
-#   TAG_ON                : On what branch should a git tag be made. Use bash regex syntax
+#   TAG_ON                                             : On what branch should a git tag be made. Use bash regex syntax
 #
 #   AWS_S3_TARGET_PATH    : The full s3 path to the tarball you want to upload, in the form of s3://<bucket>/<path>/<to>/<tarball name>
 #   AWS_DEFAULT_REGION    : The s3 region to upload your tarball.
@@ -36,7 +36,7 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     if [ -z $TARBALL_TARGET_PATH ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z $GIT_TAG_NAME ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
     if [ -z $TAG_ON ]; then export TAG_ON=^production$ ; fi
-    if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployments/$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m/%d`/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployments/$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 	
