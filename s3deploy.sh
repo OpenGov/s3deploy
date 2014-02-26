@@ -38,8 +38,11 @@ if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
 
 if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
+    
+    set +x # Mask the secret key
     if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
-
+    set -x
+    
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
     tar -c -z --exclude-vcs -f $TARBALL_TARGET_PATH .
