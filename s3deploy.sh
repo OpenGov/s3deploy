@@ -15,8 +15,9 @@
 #   GIT_TAG_NAME          : The name of the git tag you want to create
 #   TAG_ON                                             : On what branch should a git tag be made. Use bash regex syntax
 #
-#   AWS_S3_TARGET_PATH    : The full s3 path to the tarball you want to upload, in the form of s3://<bucket>/<path>/<to>/<tarball name>
-#   AWS_DEFAULT_REGION    : The s3 region to upload your tarball.
+#   AWS_S3_BUCKET         : The S3 bucket
+#   AWS_S3_OBJECT_PATH    : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
+#   AWS_DEFAULT_REGION    : The S3 region to upload your tarball.
 #   AWS_ACCESS_KEY_ID     : The aws access key id
 #   AWS_SECRET_ACCESS_KEY : The aws secret access key
 #
@@ -36,7 +37,8 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     if [ -z $TARBALL_TARGET_PATH ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z $GIT_TAG_NAME ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
     if [ -z $TAG_ON ]; then export TAG_ON=^production$ ; fi
-    if [ -z $AWS_S3_TARGET_PATH ]; then export AWS_S3_TARGET_PATH=s3://og-deployments/$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z $AWS_S3_BUCKET ]; then export AWS_S3_BUCKET=og-deployments; fi
+    if [ -z $AWS_S3_OBJECT_PATH ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 
@@ -48,10 +50,13 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
     tar --exclude-vcs -c -z -f $TARBALL_TARGET_PATH .
-
+    
+    # Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
+    TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
+   
     # Official AWS CLI is used for uploading the tarball to S3
     sudo pip install --download-cache $HOME/.pip-cache awscli
-    aws s3 cp --acl private $TARBALL_TARGET_PATH $AWS_S3_TARGET_PATH
+    TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
 
     # Only create tag on specified branch and when not a pull request
     if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
