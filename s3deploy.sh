@@ -50,13 +50,14 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
     tar --exclude-vcs -c -z -f $TARBALL_TARGET_PATH .
-    
+
     # Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
     TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
-   
+
     # Official AWS CLI is used for uploading the tarball to S3
     sudo pip install --download-cache $HOME/.pip-cache awscli
     TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
+    aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
 
     # Only create tag on specified branch and when not a pull request
     if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then

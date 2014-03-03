@@ -16,9 +16,3 @@ CREATE INDEX index_deployments_on_created
   ON deployments
   USING btree
   (created);
-
-INSERT INTO deployments(git_revision, git_branch, git_repo_name, s3_bucket, s3_object_path, tarball_checksum)
-  VALUES 
-    ('0f1c8e03fbc1f87d131fb36c290cc321136f15a6',
-     'master',				       
-    )
