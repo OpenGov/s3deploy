@@ -57,6 +57,8 @@ if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
     # Official AWS CLI is used for uploading the tarball to S3
     sudo pip install --download-cache $HOME/.pip-cache awscli
     TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
+    
+    # Upadate latest tarball
     aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
 
     # Only create tag on specified branch and when not a pull request
