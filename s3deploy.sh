@@ -48,7 +48,7 @@
 set -e -x
 
 ######################################
-########## Public Functions ##########
+########## Private Functions ##########
 ######################################
 
 # Creates a git tag and pushes it.
