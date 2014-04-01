@@ -146,3 +146,49 @@ s3d_initialize() {
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
     fi
 }
+
+
+
+######################################
+######## Compatibility Script ########
+######################################
+
+# The following will be removed after applying the upgrades to all the travis files:
+if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
+    # Check if required environment variables are set
+    if [ -z $GIT_REPO_NAME ]; then export GIT_REPO_NAME=`basename $TRAVIS_REPO_SLUG`; fi
+    if [ -z $TARBALL_TARGET_PATH ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
+    if [ -z $GIT_TAG_NAME ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
+    if [ -z $TAG_ON ]; then export TAG_ON=^production$ ; fi
+    if [ -z $AWS_S3_BUCKET ]; then export AWS_S3_BUCKET=og-deployments; fi
+    if [ -z $AWS_S3_OBJECT_PATH ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
+    if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
+
+    # we don't want to spew the secrets
+    set +x
+    if [ -z $AWS_SECRET_ACCESS_KEY ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
+    set -x
+
+    # Tar the build directory while excluding version control file
+    cd $TRAVIS_BUILD_DIR
+    tar --exclude-vcs -c -z -f $TARBALL_TARGET_PATH .
+
+    # Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
+    TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
+
+    # Official AWS CLI is used for uploading the tarball to S3
+    sudo pip install --download-cache $HOME/.pip-cache awscli
+    TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
+
+    # Upadate latest tarball
+    aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
+
+    # Only create tag on specified branch and when not a pull request
+    if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
+	git config --global user.email "alerts+travis@opengov.com"
+	git config --global user.name "og-travis"
+	git tag -a $GIT_TAG_NAME -m "Pull request: $TRAVIS_PULL_REQUEST -- Travis build number: $TRAVIS_BUILD_NUMBER"
+	git push origin $GIT_TAG_NAME;
+    fi
+fi
