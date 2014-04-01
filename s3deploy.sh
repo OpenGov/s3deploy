@@ -17,18 +17,20 @@
 #    $ s3d_initialize
 #
 # And at the end of your script call the upload function
-#    $ s3d_upload 
+#    $ s3d_upload
 #
 # Your script should look like:
 #    - . /path/to/s3deploy.sh && s3d_initialize
 #    - <do some funky tests>
-#    - ... 
+#    - ...
 #    - s3d_upload
 #
 # It expects the following environment variables to be set:
 #   TARBALL_TARGET_PATH   : The target path for the tarball to be created
+#   TARBALL_EXCLUDE_PATHS : An array of directories and paths to exclude from the build. Should be in the form of TARBALL_EXCLUDE_PATHS='--exclude=path1 --exclude=path/number/dir'. You can use the s3d_exclude_paths function if youre to lazy to include the --exclude= your self.
 #   GIT_TAG_NAME          : The name of the git tag you want to create
-#   TAG_ON                                             : On what branch should a git tag be made. Use bash regex syntax
+#   TAG_ON                : On what branch should a git tag be made. Use bash regex syntax
+#   S3D_CACHE_DIR         : Cache directory for when moving files out of the build directory. Defaults to /tmp/s3deploy_cache
 #
 #   AWS_S3_BUCKET         : The S3 bucket
 #   AWS_S3_OBJECT_PATH    : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
@@ -81,12 +83,26 @@ _check_build_exists() {
 ########## Public Functions ##########
 ######################################
 
+# Mark paths to exclude from the tarball build. You should pass an
+# array of patterns, which can include the shell wildcard, that match the file
+# names to exclude; the paths can be either files or directories.
+# Only use this function if you don't already set the TARBALL_EXCLUDE_PATHS yourself.
+s3d_exclude_paths() {
+    patterns=("$@")
+
+    for pattern in "${patterns[@]}"; do
+	TARBALL_EXCLUDE_PATHS="--exclude=$pattern $TARBALL_EXCLUDE_PATHS"
+    done
+
+    export TARBALL_EXCLUDE_PATHS
+}
+
 # Uploads the tarball to s3.
 s3d_upload() {
     if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 	# Tar the build directory while excluding version control file
 	cd $TRAVIS_BUILD_DIR
-	tar --exclude-vcs -c -z -f $TARBALL_TARGET_PATH .
+	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f $TARBALL_TARGET_PATH .
 
 	# Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
 	TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
@@ -113,6 +129,9 @@ s3d_initialize() {
     if [ -z $AWS_S3_OBJECT_PATH ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
+    if [ -z $S3D_CACHE_DIR ]; then export S3D_CACHE_DIR=/tmp/s3deploy_cache; fi
+
+    if [ ! -d $S3D_CACHE_DIR ]; then mkdir -p $S3D_CACHE_DIR; fi
 
     if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 	# we don't want to spew the secrets
