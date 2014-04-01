@@ -47,7 +47,7 @@
 ###############################################################################
 
 # Enable to exit on any failure
-set -e -x
+set -e
 
 ######################################
 ########## Private Functions #########
@@ -99,6 +99,7 @@ s3d_exclude_paths() {
 
 # Uploads the tarball to s3.
 s3d_upload() {
+    set -x 
     if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 	# Tar the build directory while excluding version control file
 	cd $TRAVIS_BUILD_DIR
@@ -115,12 +116,14 @@ s3d_upload() {
 	    _create_git_tag
 	fi
     fi
+    set +x
 }
 
 
 # Initializes necessary environment variables and checks if build exists.
 # Will exit build successfully if the build already exists in the master branch
 s3d_initialize() {
+    set -x
     if [ -z $GIT_REPO_NAME ]; then export GIT_REPO_NAME=`basename $TRAVIS_REPO_SLUG`; fi
     if [ -z $TARBALL_TARGET_PATH ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z $GIT_TAG_NAME ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
@@ -145,6 +148,7 @@ s3d_initialize() {
 	_check_build_exists `date -u +%Y/%m` # Current month
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
     fi
+    set +x 
 }
 
 
