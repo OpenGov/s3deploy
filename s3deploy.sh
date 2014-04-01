@@ -30,7 +30,6 @@
 #   TARBALL_EXCLUDE_PATHS : An array of directories and paths to exclude from the build. Should be in the form of TARBALL_EXCLUDE_PATHS='--exclude=path1 --exclude=path/number/dir'. You can use the s3d_exclude_paths function if youre to lazy to include the --exclude= your self.
 #   GIT_TAG_NAME          : The name of the git tag you want to create
 #   TAG_ON                : On what branch should a git tag be made. Use bash regex syntax
-#   S3D_CACHE_DIR         : Cache directory for when moving files out of the build directory. Defaults to /tmp/s3deploy_cache
 #
 #   AWS_S3_BUCKET         : The S3 bucket
 #   AWS_S3_OBJECT_PATH    : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
@@ -132,9 +131,6 @@ s3d_initialize() {
     if [ -z $AWS_S3_OBJECT_PATH ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
-    if [ -z $S3D_CACHE_DIR ]; then export S3D_CACHE_DIR=/tmp/s3deploy_cache; fi
-
-    if [ ! -d $S3D_CACHE_DIR ]; then mkdir -p $S3D_CACHE_DIR; fi
 
     if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 	# we don't want to spew the secrets
