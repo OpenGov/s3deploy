@@ -99,7 +99,7 @@ s3d_exclude_paths() {
 
 # Uploads the tarball to s3.
 s3d_upload() {
-    set -x 
+    set -x
     if [[ $TRAVIS_PULL_REQUEST == "false" ]]; then
 	# Tar the build directory while excluding version control file
 	cd $TRAVIS_BUILD_DIR
@@ -148,7 +148,7 @@ s3d_initialize() {
 	_check_build_exists `date -u +%Y/%m` # Current month
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
     fi
-    set +x 
+    set +x
 }
 
 
