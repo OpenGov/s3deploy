@@ -73,6 +73,7 @@ _check_build_exists() {
 	set -e
 	echo "Commit $TRAVIS_COMMIT has already been built. Copying from master to $TRAVIS_BRANCH, then exiting build.";
 	aws s3 cp s3://$AWS_S3_BUCKET/$s3_master_path s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH
+	aws s3 cp s3://$AWS_S3_BUCKET/$s3_master_path s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
 	exit 0;
     fi
     set -e
