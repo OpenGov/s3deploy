@@ -33,6 +33,7 @@
 #
 #   AWS_S3_BUCKET         : The S3 bucket
 #   AWS_S3_OBJECT_PATH    : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
+#   AWS_SQS_NAME          : The AWS SQS queue name to send messages to.
 #   AWS_DEFAULT_REGION    : The S3 region to upload your tarball.
 #   AWS_ACCESS_KEY_ID     : The aws access key id
 #   AWS_SECRET_ACCESS_KEY : The aws secret access key
@@ -83,6 +84,21 @@ _check_build_exists() {
 ########## Public Functions ##########
 ######################################
 
+# Send a message to AWS SQS
+s3d_send_sqs_msg() {
+    msg=$1
+    
+    # Get the queue URL
+    SQS_URL=`ruby -e "require 'json'; resp = JSON.parse(%x[aws sqs get-queue-url --queue-name $AWS_SQS_NAME]); puts resp['QueueUrl']"`
+    
+    # generate default message if one is not provided
+    if [ -z $msg ]; then msg="{ \"repo_name\":\"$GIT_REPO_NAME\", \"repo_slug\":\"$TRAVIS_REPO_SLUG\", \"revision\":\"$TRAVIS_COMMIT\", \"branch\":\"$TRAVIS_BRANCH\", \"build\":\"$TRAVIS_BUILD_NUMBER\", \"pull_request\":\"$TRAVIS_PULL_REQUEST\", \"s3_prefix_tarball\":\"$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`\" }"; fi
+    
+    # Send the message
+    aws sqs send-message --queue-url "$SQS_URL" --message-body "$msg"
+}
+
+
 # Mark paths to exclude from the tarball build. You should pass an
 # array of patterns, which can include the shell wildcard, that match the file
 # names to exclude; the paths can be either files or directories.
@@ -114,6 +130,9 @@ s3d_upload() {
 	# Upadate latest tarball
 	aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
 
+	# Send message to SQS
+	s3d_send_sqs_msg
+
 	# Create git tag
 	if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
 	    _create_git_tag
@@ -133,6 +152,7 @@ s3d_initialize() {
     if [ -z $TAG_ON ]; then export TAG_ON=^production$ ; fi
     if [ -z $AWS_S3_BUCKET ]; then export AWS_S3_BUCKET=og-deployments; fi
     if [ -z $AWS_S3_OBJECT_PATH ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z $AWS_SQS_NAME ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z $AWS_DEFAULT_REGION ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z $AWS_ACCESS_KEY_ID ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 
