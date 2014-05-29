@@ -96,7 +96,7 @@ _check_build_exists() {
 # Send a message to AWS SQS directly if aws credentials available otherwise through the relay.
 s3d_send_sqs_msg() {
     msg=$1
-    if [ -z $msg ]; then msg="{ \"repo_name\":\"$GIT_REPO_NAME\", \"repo_slug\":\"$TRAVIS_REPO_SLUG\", \"revision\":\"$TRAVIS_COMMIT\", \"branch\":\"$TRAVIS_BRANCH\", \"build\":\"$TRAVIS_BUILD_NUMBER\", \"pull_request\":\"$TRAVIS_PULL_REQUEST\", \"s3_prefix_tarball\":\"$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`\" }"; fi
+    if [ -z $msg ]; then msg="{ \"repo_name\":\"$GIT_REPO_NAME\", \"repo_slug\":\"$TRAVIS_REPO_SLUG\", \"revision\":\"$TRAVIS_COMMIT\", \"branch\":\"$TRAVIS_BRANCH\", \"build\":\"$TRAVIS_BUILD_NUMBER\", \"pull_request\":\"$TRAVIS_PULL_REQUEST\", \"s3_prefix_tarball\":\"$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`\", \"hook_type\":\"travis\" }"; fi
 
     if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
 	# Get the queue URL
