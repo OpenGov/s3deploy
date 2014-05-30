@@ -27,6 +27,7 @@
 #    - <do some funky tests>
 #    - ...
 #    - s3d_upload
+#    - s3d_deploy <scm provider> <chef attr>
 #
 # It expects the following environment variables to be set:
 #   TARBALL_TARGET_PATH    : The target path for the tarball to be created
@@ -93,10 +94,41 @@ _check_build_exists() {
 ########## Public Functions ##########
 ######################################
 
+# Causes a deploy to occur.
 # Send a message to AWS SQS directly if aws credentials available otherwise through the relay.
-s3d_send_sqs_msg() {
-    msg=$1
-    if [ -z $msg ]; then msg="{ \"repo_name\":\"$GIT_REPO_NAME\", \"repo_slug\":\"$TRAVIS_REPO_SLUG\", \"revision\":\"$TRAVIS_COMMIT\", \"branch\":\"$TRAVIS_BRANCH\", \"build\":\"$TRAVIS_BUILD_NUMBER\", \"pull_request\":\"$TRAVIS_PULL_REQUEST\", \"s3_prefix_tarball\":\"$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`\", \"hook_type\":\"travis\" }"; fi
+# Parameters:
+#     s3d_send_sqs_msg <scm provider: (git|s3deploy)> <chef_app_attr> <custom url affix> <msg>
+#     s3d_send_sqs_msg s3deploy dapp
+#
+# The parameter order must be respected.
+s3d_deploy() {
+    scm=$1
+    chef_app_attr=$2
+    url_affix=$3
+    msg=$4
+
+    if [ -z $scm ]; then scm=s3deploy; fi
+    if [ -z $msg ]; then
+	msg=$(cat <<EOF
+{
+  "repo_url": "git@github.com:$TRAVIS_REPO_SLUG.git",
+  "repo_name": "$GIT_REPO_NAME",
+  "repo_slug": "$TRAVIS_REPO_SLUG",
+  "revision": "$TRAVIS_COMMIT",
+  "branch": "$TRAVIS_BRANCH",
+  "build": "$TRAVIS_BUILD_NUMBER",
+  "pull_request": "$TRAVIS_PULL_REQUEST",
+  "s3_prefix_tarball": "$GIT_REPO_NAME/$TRAVIS_BRANCH/",
+  "hook_type": "travis",
+  "chef_app_attr": "$chef_app_attr",
+  "url_affix": "$3",
+  "scm_provider": "$scm",
+  "date": `date -u +%s`
+}
+EOF
+)
+
+    fi
 
     if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
 	# Get the queue URL
@@ -167,10 +199,6 @@ s3d_upload() {
 	fi
 	set -e
     fi
-
-    # Send message to SQS
-    s3d_send_sqs_msg
-
     set +x
 }
 
