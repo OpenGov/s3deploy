@@ -27,7 +27,7 @@
 #    - <do some funky tests>
 #    - ...
 #    - s3d_upload
-#    - s3d_deploy <scm provider> <chef attr>
+#    - s3d_deploy <scm provider> <chef attr> <url affix> <custom message>
 #
 # It expects the following environment variables to be set:
 #   TARBALL_TARGET_PATH    : The target path for the tarball to be created
