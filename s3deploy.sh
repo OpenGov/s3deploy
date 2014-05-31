@@ -118,7 +118,7 @@ s3d_deploy() {
   "branch": "$TRAVIS_BRANCH",
   "build": "$TRAVIS_BUILD_NUMBER",
   "pull_request": "$TRAVIS_PULL_REQUEST",
-  "s3_prefix_tarball": "$AWS_S3_OBJECT_PATH",
+  "s3_prefix_tarball": "$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
   "hook_type": "travis",
   "chef_app_attr": "$chef_app_attr",
   "url_affix": "$3",
@@ -207,6 +207,8 @@ s3d_upload() {
 # Will exit build successfully if the build already exists in the master branch
 s3d_initialize() {
     set -x
+    export BUILD_DATE=`date -u +%Y/%m`
+
     if [ -z "$GIT_REPO_NAME" ]; then export GIT_REPO_NAME=`basename $TRAVIS_REPO_SLUG`; fi
     if [ -z "$TARBALL_TARGET_PATH" ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z "$GIT_TAG_NAME" ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
@@ -215,7 +217,7 @@ s3d_initialize() {
     if [ -z "$OCD_RELAY_URL" ]; then export OCD_RELAY_URL='https://relay.internal.opengov.com'; fi
 
     if [ -z "$AWS_S3_BUCKET" ]; then export AWS_S3_BUCKET=og-deployments; fi
-    if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/`date -u +%Y/%m`/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
@@ -229,7 +231,7 @@ s3d_initialize() {
 	# Install the aws cli tools
 	sudo pip install --download-cache $HOME/.pip-cache awscli==1.3.13
 
-	_check_build_exists `date -u +%Y/%m` # Current month
+	_check_build_exists $BUILD_DATE # Current month
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
     fi
     set +x
