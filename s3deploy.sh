@@ -118,7 +118,7 @@ s3d_deploy() {
   "branch": "$TRAVIS_BRANCH",
   "build": "$TRAVIS_BUILD_NUMBER",
   "pull_request": "$TRAVIS_PULL_REQUEST",
-  "s3_prefix_tarball": "$GIT_REPO_NAME/$TRAVIS_BRANCH/",
+  "s3_prefix_tarball": "$AWS_S3_OBJECT_PATH",
   "hook_type": "travis",
   "chef_app_attr": "$chef_app_attr",
   "url_affix": "$3",
