@@ -112,6 +112,7 @@ s3d_deploy() {
 	msg=$(cat <<EOF
 {
   "repo_url": "git@github.com:$TRAVIS_REPO_SLUG.git",
+  "repo_owner": "$GIT_REPO_OWNER",
   "repo_name": "$GIT_REPO_NAME",
   "repo_slug": "$TRAVIS_REPO_SLUG",
   "revision": "$TRAVIS_COMMIT",
@@ -209,7 +210,9 @@ s3d_initialize() {
     set -x
     export BUILD_DATE=`date -u +%Y/%m`
 
-    if [ -z "$GIT_REPO_NAME" ]; then export GIT_REPO_NAME=`basename $TRAVIS_REPO_SLUG`; fi
+    IFS='/' read -a ginfo <<< "$TRAVIS_REPO_SLUG"
+    if [ -z "$GIT_REPO_OWNER" ]; then export GIT_REPO_OWNER="${ginfo[0]}"; fi
+    if [ -z "$GIT_REPO_NAME" ]; then export GIT_REPO_NAME="${ginfo[1]}"; fi
     if [ -z "$TARBALL_TARGET_PATH" ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z "$GIT_TAG_NAME" ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
     if [ -z "$TAG_ON" ]; then export TAG_ON=^production$ ; fi
