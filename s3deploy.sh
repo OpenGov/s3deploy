@@ -27,7 +27,7 @@
 #    - <do some funky tests>
 #    - ...
 #    - s3d_upload
-#    - s3d_deploy <scm provider> <chef attr> <url affix> <custom message>
+#    - s3d_deploy <scm provider> <chef attr> <url affix> <chef runlist> <custom message>
 #
 # It expects the following environment variables to be set:
 #   TARBALL_TARGET_PATH    : The target path for the tarball to be created
@@ -105,8 +105,10 @@ s3d_deploy() {
     scm=$1
     chef_app_attr=$2
     url_affix=$3
-    msg=$4
+    runlist=$4
+    msg=$5
 
+    if [ -z $runlist ]; then runlist='role[full-stack]'; fi
     if [ -z $scm ]; then scm=s3deploy; fi
     if [ -z $msg ]; then
 	msg=$(cat <<EOF
@@ -122,13 +124,13 @@ s3d_deploy() {
   "s3_prefix_tarball": "$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
   "hook_type": "travis",
   "chef_app_attr": "$chef_app_attr",
-  "url_affix": "$3",
+  "url_affix": "$url_affix",
+  "runlist": "$runlist",
   "scm_provider": "$scm",
   "date": `date -u +%s`
 }
 EOF
 )
-
     fi
 
     if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
