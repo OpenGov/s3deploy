@@ -180,7 +180,7 @@ s3d_upload() {
 	TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
 
 	# Upload to S3
-	TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
+	TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT]); puts resp['ETag'][1..-2]"`
 
 	# Upadate latest tarball
 	aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
@@ -234,7 +234,7 @@ s3d_initialize() {
 	set -x
 
 	# Install the aws cli tools
-	sudo pip install --download-cache $HOME/.pip-cache awscli==1.3.13
+	sudo pip install --download-cache $HOME/.pip-cache awscli==1.3.16
 
 	_check_build_exists $BUILD_DATE # Current month
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
