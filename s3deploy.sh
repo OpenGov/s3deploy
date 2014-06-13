@@ -39,7 +39,7 @@
 #   OCD_RELAY_USER         : The HTTP basic auth username.
 #   OCD_RERLAY_PW          : The HTTP basic aauth password.
 #
-#   AWS_S3_BUCKET          : The S3 bucket
+#   AWS_S3_BUCKET          : The S3 bucket to upload the tarball to.
 #   AWS_S3_OBJECT_PATH     : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
 #   AWS_SQS_NAME           : The AWS SQS queue name to send messages to.
 #   AWS_DEFAULT_REGION     : The S3 region to upload your tarball.
@@ -121,7 +121,7 @@ s3d_deploy() {
   "branch": "$TRAVIS_BRANCH",
   "build": "$TRAVIS_BUILD_NUMBER",
   "pull_request": "$TRAVIS_PULL_REQUEST",
-  "s3_prefix_tarball": "$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
+  "s3_prefix_tarball": "$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
   "hook_type": "travis",
   "chef_app_attr": "$chef_app_attr",
   "url_affix": "$url_affix",
@@ -221,7 +221,13 @@ s3d_initialize() {
 
     if [ -z "$OCD_RELAY_URL" ]; then export OCD_RELAY_URL='https://relay.internal.opengov.com'; fi
 
-    if [ -z "$AWS_S3_BUCKET" ]; then export AWS_S3_BUCKET=og-deployments; fi
+    if [ -z "$AWS_S3_BUCKET" ]; then
+	if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
+	    export AWS_S3_BUCKET=og-deployments;
+	else
+	    export AWS_S3_BUCKET=og-deployments-dev;
+	fi
+    fi
     if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
