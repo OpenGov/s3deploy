@@ -198,7 +198,7 @@ s3d_upload() {
 	if [ -z $OCD_RELAY_USER ] && [ -z $OCD_RELAY_PW ]; then
 	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/data"
 	else
-	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH "$OCD_RELAY_URL/relay/hook"
+	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH "$OCD_RELAY_URL/relay/data"
 	fi
 	set -e
     fi
