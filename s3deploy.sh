@@ -57,7 +57,7 @@
 ###############################################################################
 
 # Enable to exit on any failure
-set -e
+#set -e
 
 ######################################
 ########## Private Functions #########
@@ -93,6 +93,25 @@ _check_build_exists() {
 ######################################
 ########## Public Functions ##########
 ######################################
+
+# Syncs a directory to s3. By default the files synced are set to private read only.
+# Parameters:
+#     s3d_sync <local_directory> <s3_path> <permissions>
+#     s3d_sync s3deploy dapp
+
+s3d_sync() {
+    if [ ! "$#" -ge 2 ]; then echo "s3d_sync requires at least 2 parameters; $# parameters given"; exit 1; fi
+
+    local_dir=$1
+    s3_path=$2
+    acl=$3
+
+    if [ -z $acl ]; then acl='private'; fi
+
+    set -x
+    aws s3 sync --acl "$acl" "$local_dir" "s3://$s3_path"
+    set +x
+}
 
 # Causes a deploy to occur.
 # Send a message to AWS SQS directly if aws credentials available otherwise through the relay.
