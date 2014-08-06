@@ -240,7 +240,7 @@ s3d_initialize() {
 	set -x
 
 	# Install the aws cli tools
-	sudo pip install --download-cache $HOME/.pip-cache awscli==1.3.16
+	sudo pip install --download-cache $HOME/.pip-cache awscli==1.3.25
 
 	_check_build_exists $BUILD_DATE # Current month
 	_check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
