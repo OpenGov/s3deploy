@@ -67,24 +67,24 @@ set -e
 _create_git_tag() {
     git config --global user.email "alerts+travis@opengov.com"
     git config --global user.name "og-travis"
-    git tag -a $GIT_TAG_NAME -m "Pull request: $TRAVIS_PULL_REQUEST -- Travis build number: $TRAVIS_BUILD_NUMBER"
-    git push origin $GIT_TAG_NAME;
+    git tag -a "$GIT_TAG_NAME" -m "Pull request: $TRAVIS_PULL_REQUEST -- Travis build number: $TRAVIS_BUILD_NUMBER"
+    git push origin "$GIT_TAG_NAME";
 }
 
 # Exits from current build if the commit has already been tarballed in the
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
 _check_build_exists() {
     date=$1
-    s3_master_path=$GIT_REPO_NAME/master/$date/$TRAVIS_COMMIT.tar.gz
+    s3_master_path="$GIT_REPO_NAME/master/$date/$TRAVIS_COMMIT.tar.gz"
 
     set +e
-    aws s3api head-object --bucket $AWS_S3_BUCKET --key $s3_master_path
+    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$s3_master_path"
 
-    if [[ $? -eq 0 ]]; then
+    if [ "$?" -eq 0 ]; then
 	set -e
 	echo "Commit $TRAVIS_COMMIT has already been built. Copying from master to $TRAVIS_BRANCH, then exiting build.";
-	aws s3 cp s3://$AWS_S3_BUCKET/$s3_master_path s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH
-	aws s3 cp s3://$AWS_S3_BUCKET/$s3_master_path s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
+	aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
+	aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
 	exit 0;
     fi
     set -e
@@ -98,7 +98,6 @@ _check_build_exists() {
 # Parameters:
 #     s3d_sync <local_directory> <s3_path> <permissions>
 #     s3d_sync s3deploy dapp
-
 s3d_sync() {
     if [ ! "$#" -ge 2 ]; then echo "s3d_sync requires at least 2 parameters; $# parameters given"; exit 1; fi
 
@@ -127,9 +126,9 @@ s3d_deploy() {
     runlist=$4
     msg=$5
 
-    if [ -z $runlist ]; then runlist='role[full-stack]'; fi
-    if [ -z $scm ]; then scm=s3deploy; fi
-    if [ -z $msg ]; then
+    if [ -z "$runlist" ]; then runlist='role[full-stack]'; fi
+    if [ -z "$scm" ]; then scm=s3deploy; fi
+    if [ -z "$msg" ]; then
 	msg=$(cat <<EOF
 {
   "repo_url": "git@github.com:$TRAVIS_REPO_SLUG.git",
@@ -152,7 +151,7 @@ EOF
 )
     fi
 
-    if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
+    if [ "$TRAVIS_SECURE_ENV_VARS" = "true" ]; then
 	# Get the queue URL
 	SQS_URL=`ruby -e "require 'json'; resp = JSON.parse(%x[aws sqs get-queue-url --queue-name $AWS_SQS_NAME]); puts resp['QueueUrl']"`
 
@@ -162,7 +161,7 @@ EOF
     else
 	# its ok if the message fails
 	set +e
-	if [ -z $OCD_RELAY_USER ] && [ -z $OCD_RELAY_PW ]; then
+	if [ -z "$OCD_RELAY_USER" ] && [ -z "$OCD_RELAY_PW" ]; then
 	    curl -X POST -H 'Content-Type: application/json' --data "$msg" --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/hook"
 	else
 	    curl -X POST -H 'Content-Type: application/json' --data "$msg" "$OCD_RELAY_URL/relay/hook"
@@ -192,8 +191,8 @@ s3d_upload() {
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
 
-    if [[ $TRAVIS_PULL_REQUEST == "false" ]] && [ -z "$TRAVIS_TAG" ]; then
-	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f $TARBALL_TARGET_PATH .
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ -z "$TRAVIS_TAG" ]; then
+	tar --exclude-vcs "$TARBALL_EXCLUDE_PATHS" -c -z -f "$TARBALL_TARGET_PATH" .
 
 	# Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
 	TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
@@ -202,19 +201,19 @@ s3d_upload() {
 	TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT]); puts resp['ETag'][1..-2]"`
 
 	# Upadate latest tarball
-	aws s3 cp s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz
+	aws s3 cp "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
 
 	# Create git tag
-	if [[ $TRAVIS_BRANCH =~ $TAG_ON ]]; then
+	if [[ "$TRAVIS_BRANCH" =~ "$TAG_ON" ]]; then
 	    _create_git_tag
 	fi
 
-    elif [[ $TRAVIS_SECURE_ENV_VARS == "false" ]] && [[ $TRAVIS_BRANCH == "master" ]]; then
+    elif [ "$TRAVIS_SECURE_ENV_VARS" = "false" ] && [ "$TRAVIS_BRANCH" = "master" ]; then
 	# Its ok if it fails
 	set +e
-	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f $TARBALL_TARGET_PATH .
+	tar --exclude-vcs "$TARBALL_EXCLUDE_PATHS" -c -z -f "$TARBALL_TARGET_PATH" .
 
-	if [ -z $OCD_RELAY_USER ] && [ -z $OCD_RELAY_PW ]; then
+	if [ -z "$OCD_RELAY_USER" ] && [ -z "$OCD_RELAY_PW" ]; then
 	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/data"
 	else
 	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH "$OCD_RELAY_URL/relay/data"
@@ -252,7 +251,7 @@ s3d_initialize() {
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 
-    if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
 	# we don't want to spew the secrets
 	set +x
 	if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
