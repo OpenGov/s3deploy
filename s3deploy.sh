@@ -186,10 +186,9 @@ s3d_exclude_paths() {
 
 # Uploads the tarball to s3.
 s3d_upload() {
-    set -x
-
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
+    set -x
 
     if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ -z "$TRAVIS_TAG" ]; then
 	tar --exclude-vcs "$TARBALL_EXCLUDE_PATHS" -c -z -f "$TARBALL_TARGET_PATH" .
