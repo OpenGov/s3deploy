@@ -97,7 +97,9 @@ _check_build_exists() {
 # Syncs a directory to s3. By default the files synced are set to private read only.
 # Parameters:
 #     s3d_sync <local_directory> <s3_path> <permissions> <custom flags>
-#     s3d_sync s3deploy dapp
+#
+# Example:
+# s3d_sync assets dapp-assets public --exclude '*' --include '*-????????????????????????????????.*'
 s3d_sync() {
     if [ ! "$#" -ge 2 ]; then echo "s3d_sync requires at least 2 parameters; $# parameters given"; exit 1; fi
 
