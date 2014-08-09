@@ -111,7 +111,7 @@ s3d_sync() {
     if [ -z $acl ]; then acl='private'; fi
 
     set -x
-    if [ "$TRAVIS_PULL_REQUEST" = "false" ]
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
 	aws s3 sync "${@:4:num_extra}" --acl "$acl" "$local_dir" "s3://$s3_path"
     fi
     set +x
