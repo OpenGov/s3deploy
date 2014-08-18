@@ -196,7 +196,7 @@ s3d_upload() {
     set -x
 
     if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ -z "$TRAVIS_TAG" ]; then
-	tar --exclude-vcs "$TARBALL_EXCLUDE_PATHS" -c -z -f "$TARBALL_TARGET_PATH" .
+	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
 
 	# Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
 	TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
@@ -215,7 +215,7 @@ s3d_upload() {
     elif [ "$TRAVIS_SECURE_ENV_VARS" = "false" ] && [ "$TRAVIS_BRANCH" = "master" ]; then
 	# Its ok if it fails
 	set +e
-	tar --exclude-vcs "$TARBALL_EXCLUDE_PATHS" -c -z -f "$TARBALL_TARGET_PATH" .
+	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
 
 	if [ -z "$OCD_RELAY_USER" ] && [ -z "$OCD_RELAY_PW" ]; then
 	    curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/data"
