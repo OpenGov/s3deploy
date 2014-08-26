@@ -63,6 +63,27 @@ set -e
 ########## Private Functions #########
 ######################################
 
+# Sets information about the deploy into .s3d
+_set_metadata() {
+    s3d_meta_path="$1"
+    if [ -z "$s3d_meta_path" ]; then s3d_meta_path=".s3d"; fi
+
+    cat <<EOF > "$s3d_meta_path"
+{
+  "repo_url": "git@github.com:$TRAVIS_REPO_SLUG.git",
+  "repo_owner": "$GIT_REPO_OWNER",
+  "repo_name": "$GIT_REPO_NAME",
+  "repo_slug": "$TRAVIS_REPO_SLUG",
+  "revision": "$TRAVIS_COMMIT",
+  "branch": "$TRAVIS_BRANCH",
+  "build": "$TRAVIS_BUILD_NUMBER",
+  "pull_request": "$TRAVIS_PULL_REQUEST",
+  "s3_prefix_tarball": "$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
+  "date": `date -u +%s`
+}
+EOF
+}
+
 # Creates a git tag and pushes it.
 _create_git_tag() {
     git config --global user.email "alerts+travis@opengov.com"
@@ -195,6 +216,8 @@ s3d_upload() {
     cd $TRAVIS_BUILD_DIR
     set -x
 
+    _set_metadata
+
     if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ -z "$TRAVIS_TAG" ]; then
 	tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
 
@@ -202,7 +225,7 @@ s3d_upload() {
 	TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
 
 	# Upload to S3
-	TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT]); puts resp['ETag'][1..-2]"`
+	TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH]); puts resp['ETag'][1..-2]"`
 
 	# Upadate latest tarball
 	aws s3 cp "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
