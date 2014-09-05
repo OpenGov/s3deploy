@@ -106,6 +106,9 @@ _check_build_exists() {
 	echo "Commit $TRAVIS_COMMIT has already been built. Copying from master to $TRAVIS_BRANCH, then exiting build.";
 	aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
 	aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
+
+	# Create git tag
+	if [[ "$TRAVIS_BRANCH" =~ "$TAG_ON" ]]; then _create_git_tag; fi
 	exit 0;
     fi
     set -e
@@ -231,9 +234,7 @@ s3d_upload() {
 	aws s3 cp "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
 
 	# Create git tag
-	if [[ "$TRAVIS_BRANCH" =~ "$TAG_ON" ]]; then
-	    _create_git_tag
-	fi
+	if [[ "$TRAVIS_BRANCH" =~ "$TAG_ON" ]]; then _create_git_tag; fi
 
     elif [ "$TRAVIS_SECURE_ENV_VARS" = "false" ] && [ "$TRAVIS_BRANCH" = "master" ]; then
 	# Its ok if it fails
