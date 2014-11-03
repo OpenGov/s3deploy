@@ -98,7 +98,7 @@ _check_build_exists() {
     date=$1
 
     if [ -z "$2" ]; then
-        check_branches=( 'master' 'staging' );
+        check_branches=( 'master' 'staging' 'production' );
     else
         check_branches=(${2//,/ })
     fi
