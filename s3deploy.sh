@@ -96,22 +96,32 @@ _create_git_tag() {
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
 _check_build_exists() {
     date=$1
-    s3_master_path="$GIT_REPO_NAME/master/$date/$TRAVIS_COMMIT.tar.gz"
 
-    set +e
-    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$s3_master_path"
-
-    if [ "$?" -eq 0 ]; then
-        set -e
-        echo "Commit $TRAVIS_COMMIT has already been built. Copying from master to $TRAVIS_BRANCH, then exiting build.";
-        aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
-        aws s3 cp "s3://$AWS_S3_BUCKET/$s3_master_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
-
-        # Create git tag
-        if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
-        exit 0;
+    if [ -z "$2" ]; then
+        check_branches=( 'master' 'staging' 'production' );
+    else
+        check_branches=(${2//,/ })
     fi
-    set -e
+
+    for branch in "${check_branches[@]}"
+    do
+        s3_path="$GIT_REPO_NAME/$branch/$date/$TRAVIS_COMMIT.tar.gz"
+
+        set +e
+        aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$s3_path"
+
+        if [ "$?" -eq 0 ]; then
+            set -e
+            echo "Commit $TRAVIS_COMMIT has already been built. Copying from $branch to $TRAVIS_BRANCH, then exiting build.";
+            aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
+            aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
+
+            # Create git tag
+            if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
+            exit 0;
+        fi
+        set -e
+    done
 }
 
 ######################################
@@ -286,7 +296,7 @@ s3d_initialize() {
         set -x
 
         # Install the aws cli tools
-        sudo pip install --download-cache $HOME/.pip-cache awscli==1.4.2
+        sudo pip install --download-cache $HOME/.pip-cache awscli==1.5.4
 
         _check_build_exists $BUILD_DATE # Current month
         _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
