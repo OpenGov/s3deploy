@@ -296,7 +296,10 @@ s3d_initialize() {
         set -x
 
         # Install the aws cli tools
-        sudo pip install --download-cache $HOME/.pip-cache awscli==1.5.4
+        pip install --user --download-cache $HOME/.pip-cache awscli==1.6.10
+
+        # Update the path to access the aws executable
+        export PATH="$HOME/.local/bin/:$PATH"
 
         _check_build_exists $BUILD_DATE # Current month
         _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
