@@ -54,6 +54,8 @@
 #   TRAVIS_BUILD_DIR       : The absolute path to the directory where the repository
 #   TRAVIS_TAG             : Set to the git tag if the build is a for a git tag.
 #   TRAVIS_SECURE_ENV_VARS : Whether the secret environment variables are available or not.
+#
+#   TRAVIS_PYTHON_VERSION  : Version of python that is being used, indicating that its using virtualenv
 ###############################################################################
 
 # Enable to exit on any failure
@@ -295,11 +297,17 @@ s3d_initialize() {
         if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
         set -x
 
+        # Enable user install if virtualenv has not been activated
+        # The flag is unsupported in virtualenv since python packages
+        # are already installed in user owned paths
+        user_mode=''
+        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then user_mode='--user'; fi
+
         # Install the aws cli tools
-        pip install --user --download-cache $HOME/.pip-cache awscli==1.6.10
+        pip install $user_mode --download-cache $HOME/.pip-cache awscli==1.6.10
 
         # Update the path to access the aws executable
-        export PATH="$HOME/.local/bin/:$PATH"
+        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
 
         _check_build_exists $BUILD_DATE # Current month
         _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
