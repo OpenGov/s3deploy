@@ -298,6 +298,8 @@ s3d_initialize() {
         set -x
 
         # Enable user install if virtualenv has not been activated
+        # The flag is unsupported in virtualenv since python packages
+        # are already installed in user owned paths
         user_mode=''
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then user_mode='--user'; fi
 
