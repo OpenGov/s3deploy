@@ -305,7 +305,7 @@ s3d_initialize() {
         pip install $user_mode --download-cache $HOME/.pip-cache awscli==1.6.10
 
         # Update the path to access the aws executable
-        if [ -z "$TRAVIS_PYTHON_VERSION" ]; export PATH="$HOME/.local/bin/:$PATH"; fi
+        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
 
         _check_build_exists $BUILD_DATE # Current month
         _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
