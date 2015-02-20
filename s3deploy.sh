@@ -299,12 +299,19 @@ s3d_initialize() {
 
         # Enable user install if virtualenv has not been activated
         # The flag is unsupported in virtualenv since python packages
-        # are already installed in user owned paths
+        # are already installed in user owned paths.
+        # We also need to force reinstall the aws cli package if the project
+        # python based because if its caching the pip packages, its not caching
+        # the aws binary.
         user_mode=''
-        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then user_mode='--user'; fi
+        ignore_installed=''
+        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then
+            user_mode='--user'
+            ignore_installed='--ignore-installed'
+        fi
 
         # Install the aws cli tools
-        pip install $user_mode --download-cache $HOME/.pip-cache awscli==1.7.10
+        pip install $user_mode $ignore_installed --download-cache "$HOME/.pip-cache" awscli==1.7.11
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
