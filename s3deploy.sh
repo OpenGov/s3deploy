@@ -307,6 +307,7 @@ s3d_initialize() {
         ignore_installed=''
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then
             user_mode='--user'
+        else
             ignore_installed='--ignore-installed'
         fi
 
