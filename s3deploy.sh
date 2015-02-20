@@ -304,7 +304,7 @@ s3d_initialize() {
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then user_mode='--user'; fi
 
         # Install the aws cli tools
-        pip install $user_mode --download-cache $HOME/.pip-cache awscli==1.6.10
+        pip install $user_mode --download-cache $HOME/.pip-cache awscli==1.7.10
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
