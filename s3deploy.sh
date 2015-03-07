@@ -98,6 +98,7 @@ _create_git_tag() {
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
 _check_build_exists() {
     date=$1
+    exit_if_build_exists=$2
 
     if [ -z "$2" ]; then
         check_branches=( 'master' 'staging' 'production' );
@@ -120,7 +121,14 @@ _check_build_exists() {
 
             # Create git tag
             if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
-            exit 0;
+
+            # Exit if flag was set
+            if [ -n "$exit_if_build_exists" ]; then
+                exit 0;
+
+            else # Export variable to let others know that the build already exists
+                export S3D_BUILD_EXISTS=1
+            fi
         fi
         set -e
     done
@@ -227,6 +235,8 @@ s3d_exclude_paths() {
 
 # Uploads the tarball to s3.
 s3d_upload() {
+    if [ -n "$S3D_BUILD_EXISTS"]; then return; fi
+
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
     set -x
@@ -312,13 +322,14 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.7.11
+        pip install $user_mode $ignore_installed awscli==1.7.13
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
 
-        _check_build_exists $BUILD_DATE # Current month
-        _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
+        exit_if_build_exists=$1
+        _check_build_exists $BUILD_DATE $exit_if_build_exists # Current month
+        _check_build_exists `date -u +%Y/%m --date '-1 month'` $exit_if_build_exists # Previous month
     fi
     set +x
 }
