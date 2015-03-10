@@ -96,9 +96,10 @@ _create_git_tag() {
 
 # Exits from current build if the commit has already been tarballed in the
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
+# Takes an optional argument
 _check_build_exists() {
     date=$1
-    exit_if_build_exists=$2
+    dont_exit_if_build_exists=$2
 
     if [ -z "$2" ]; then
         check_branches=( 'master' 'staging' 'production' );
@@ -122,12 +123,12 @@ _check_build_exists() {
             # Create git tag
             if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
 
-            # Exit if flag was set
-            if [ -n "$exit_if_build_exists" ]; then
-                exit 0;
-
-            else # Export variable to let others know that the build already exists
+            if [ -n "$dont_exit_if_build_exists" ]; then
+                # Export variable to let others know that the build already exists
                 export S3D_BUILD_EXISTS=1
+
+            else
+                exit 0;
             fi
         fi
         set -e
@@ -327,9 +328,9 @@ s3d_initialize() {
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
 
-        exit_if_build_exists=$1
-        _check_build_exists $BUILD_DATE $exit_if_build_exists # Current month
-        _check_build_exists `date -u +%Y/%m --date '-1 month'` $exit_if_build_exists # Previous month
+        dont_exit_if_build_exists=$1
+        _check_build_exists $BUILD_DATE $dont_exit_if_build_exists # Current month
+        _check_build_exists `date -u +%Y/%m --date '-1 month'` $dont_exit_if_build_exists # Previous month
     fi
     set +x
 }
