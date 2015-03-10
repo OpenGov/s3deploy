@@ -96,10 +96,15 @@ _create_git_tag() {
 
 # Exits from current build if the commit has already been tarballed in the
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
+# Takes the following args:
+#    $1, date : The date to check in 'YEAR/MONTH' format. Required.
+#    $2, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can be set to any truthy value.
+#    $3, check_branches : Comma separated list of branches to check for pre existing builds. Defaults to master, staging, and production branches
 _check_build_exists() {
     date=$1
+    dont_exit_if_build_exists=$2
 
-    if [ -z "$2" ]; then
+    if [ -z "$3" ]; then
         check_branches=( 'master' 'staging' 'production' );
     else
         check_branches=(${2//,/ })
@@ -120,7 +125,14 @@ _check_build_exists() {
 
             # Create git tag
             if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
-            exit 0;
+
+            if [ -n "$dont_exit_if_build_exists" ]; then
+                # Export variable to let others know that the build already exists
+                export S3D_BUILD_EXISTS=1
+
+            else
+                exit 0;
+            fi
         fi
         set -e
     done
@@ -266,6 +278,9 @@ s3d_upload() {
 
 # Initializes necessary environment variables and checks if build exists.
 # Will exit build successfully if the build already exists in the master branch
+# Takes the following arguments
+#    $1, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can be set to any truthy value.
+
 s3d_initialize() {
     set -x
     export BUILD_DATE=`date -u +%Y/%m`
@@ -312,13 +327,14 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.7.11
+        pip install $user_mode $ignore_installed awscli==1.7.13
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
 
-        _check_build_exists $BUILD_DATE # Current month
-        _check_build_exists `date -u +%Y/%m --date '-1 month'` # Previous month
+        dont_exit_if_build_exists=$1
+        _check_build_exists $BUILD_DATE $dont_exit_if_build_exists # Current month
+        _check_build_exists `date -u +%Y/%m --date '-1 month'` $dont_exit_if_build_exists # Previous month
     fi
     set +x
 }
