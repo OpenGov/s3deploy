@@ -98,7 +98,7 @@ _create_git_tag() {
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
 # Takes the following args:
 #    $1, date : The date to check in 'YEAR/MONTH' format. Required.
-#    $2, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can bet set to any truthy value.
+#    $2, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can be set to any truthy value.
 #    $3, check_branches : Comma separated list of branches to check for pre existing builds. Defaults to master, staging, and production branches
 _check_build_exists() {
     date=$1
@@ -278,6 +278,9 @@ s3d_upload() {
 
 # Initializes necessary environment variables and checks if build exists.
 # Will exit build successfully if the build already exists in the master branch
+# Takes the following arguments
+#    $1, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can be set to any truthy value.
+
 s3d_initialize() {
     set -x
     export BUILD_DATE=`date -u +%Y/%m`
