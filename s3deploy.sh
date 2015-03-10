@@ -96,12 +96,15 @@ _create_git_tag() {
 
 # Exits from current build if the commit has already been tarballed in the
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
-# Takes an optional argument
+# Takes the following args:
+#    $1, date : The date to check in 'YEAR/MONTH' format. Required.
+#    $2, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can bet set to any truthy value.
+#    $3, check_branches : Comma separated list of branches to check for pre existing builds. Defaults to master, staging, and production branches
 _check_build_exists() {
     date=$1
     dont_exit_if_build_exists=$2
 
-    if [ -z "$2" ]; then
+    if [ -z "$3" ]; then
         check_branches=( 'master' 'staging' 'production' );
     else
         check_branches=(${2//,/ })
