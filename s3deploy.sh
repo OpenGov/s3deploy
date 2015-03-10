@@ -239,8 +239,6 @@ s3d_exclude_paths() {
 
 # Uploads the tarball to s3.
 s3d_upload() {
-    if [ -n "$S3D_BUILD_EXISTS"]; then return; fi
-
     # Tar the build directory while excluding version control file
     cd $TRAVIS_BUILD_DIR
     set -x
