@@ -104,6 +104,9 @@ _check_build_exists() {
     date=$1
     dont_exit_if_build_exists=$2
 
+    # Leave function if build already exists
+    if [ -n "$S3D_BUILD_EXISTS" ]; then return; fi
+
     if [ -z "$3" ]; then
         check_branches=( 'master' 'staging' 'production' );
     else
@@ -129,6 +132,7 @@ _check_build_exists() {
             if [ -n "$dont_exit_if_build_exists" ]; then
                 # Export variable to let others know that the build already exists
                 export S3D_BUILD_EXISTS=1
+                break
 
             else
                 exit 0;
@@ -327,7 +331,7 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.7.13
+        pip install $user_mode $ignore_installed awscli==1.7.14
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
