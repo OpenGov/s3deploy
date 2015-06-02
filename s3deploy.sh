@@ -251,7 +251,7 @@ s3d_upload() {
 
     if [ "$TRAVIS_PULL_REQUEST" = "false" ] && [ -z "$TRAVIS_TAG" ]; then
         # tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
-        tar $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
+        tar --exclude='./.git' $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
 
         # Get sha256 checksum  # Converts the md5sum hex string output to raw bytes and converts that to base64
         TARBALL_CHECKSUM=$(cat $TARBALL_TARGET_PATH | sha256sum | cut -b 1-64) # | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf | base64)
