@@ -267,18 +267,8 @@ s3d_upload() {
 
         # Create git tag
         if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
-
-    elif [ "$TRAVIS_SECURE_ENV_VARS" = "false" ] && [ "$TRAVIS_BRANCH" = "master" ]; then
-        # Its ok if it fails
-        set +e
-        tar --exclude-vcs $TARBALL_EXCLUDE_PATHS -c -z -f "$TARBALL_TARGET_PATH" .
-
-        if [ -z "$OCD_RELAY_USER" ] && [ -z "$OCD_RELAY_PW" ]; then
-            curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/data"
-        else
-            curl -X POST -H 'Content-Type: application/octet-stream' -H "X-s3-key: $AWS_S3_OBJECT_PATH"  --data-binary @$TARBALL_TARGET_PATH "$OCD_RELAY_URL/relay/data"
-        fi
-        set -e
+    else
+        echo 'Skipping build upload to S3'
     fi
     set +x
 }
@@ -335,7 +325,7 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.9.7
+        pip install $user_mode $ignore_installed awscli==1.10.11
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
