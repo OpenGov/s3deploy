@@ -267,6 +267,8 @@ s3d_upload() {
 
         # Create git tag
         if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
+    else
+        echo 'Skipping build upload to S3'
     fi
     set +x
 }
