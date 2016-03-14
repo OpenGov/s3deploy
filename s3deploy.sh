@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) OpenGov 2014
+# Copyright (c) OpenGov 2014 - 2016
 ############################
 # Simple script that tarballs the build directory and puts it to s3. The script
 # assumes that it is being run under a Travis CI environment.
@@ -41,6 +41,8 @@
 #
 #   AWS_S3_BUCKET          : The S3 bucket to upload the tarball to.
 #   AWS_S3_OBJECT_PATH     : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
+#   AWS_S3_GLOBAL_NAMESPACE_DIR : The global namespace directory for placing all builds. Defaults tp '_global_'
+#   AWS_S3_GLOBAL_OBJECT_PATH   : The global object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>. Defaults to <repo name>/_global_/<commit>.tar.gz
 #   AWS_SQS_NAME           : The AWS SQS queue name to send messages to.
 #   AWS_DEFAULT_REGION     : The S3 region to upload your tarball.
 #   AWS_ACCESS_KEY_ID      : The aws access key id
@@ -123,8 +125,6 @@ _check_build_exists() {
         if [ "$?" -eq 0 ]; then
             set -e
             echo "Commit $TRAVIS_COMMIT has already been built. Copying from $branch to $TRAVIS_BRANCH, then exiting build.";
-            # aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
-            # aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
             aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_OBJECT_PATH"
             aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
 
@@ -299,7 +299,10 @@ s3d_initialize() {
             export AWS_S3_BUCKET=og-deployments-dev;
         fi
     fi
+
     if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then export AWS_S3_GLOBAL_OBJECT_PATH=$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
@@ -325,7 +328,7 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.10.11
+        pip install $user_mode $ignore_installed awscli==1.10.12
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
