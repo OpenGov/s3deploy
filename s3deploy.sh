@@ -262,8 +262,14 @@ s3d_upload() {
         TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT]); puts resp['ETag'][1..-2]"`
 
         # Upadate latest tarball
-        # aws s3 cp "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
         aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
+
+        # Copy to the global namespace and as its branch name.
+        # Commit
+        aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+
+        # branch
+        aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_BRANCH.tar.gz"
 
         # Create git tag
         if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
