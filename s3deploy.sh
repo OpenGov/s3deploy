@@ -144,8 +144,6 @@ _check_global_build_exists() {
         if [ -n "$dont_exit_if_build_exists" ]; then
             # Export variable to let others know that the build already exists
             export S3D_BUILD_EXISTS=1
-            break
-
         else
             exit 0;
         fi
