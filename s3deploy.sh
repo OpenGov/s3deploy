@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) OpenGov 2014
+# Copyright (c) OpenGov 2014 - 2016
 ############################
 # Simple script that tarballs the build directory and puts it to s3. The script
 # assumes that it is being run under a Travis CI environment.
@@ -33,7 +33,6 @@
 #   TARBALL_TARGET_PATH    : The target path for the tarball to be created
 #   TARBALL_EXCLUDE_PATHS  : An array of directories and paths to exclude from the build. Should be in the form of TARBALL_EXCLUDE_PATHS='--exclude=path1 --exclude=path/number/dir'. You can use the s3d_exclude_paths function if youre to lazy to include the --exclude= your self.
 #   GIT_TAG_NAME           : The name of the git tag you want to create
-#   TAG_ON                 : On what branch should a git tag be made. Use bash regex syntax
 #
 #   OCD_RELAY_URL          : The url to the ocd relay.
 #   OCD_RELAY_USER         : The HTTP basic auth username.
@@ -41,6 +40,8 @@
 #
 #   AWS_S3_BUCKET          : The S3 bucket to upload the tarball to.
 #   AWS_S3_OBJECT_PATH     : The object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>
+#   AWS_S3_GLOBAL_NAMESPACE_DIR : The global namespace directory for placing all builds. Defaults tp '_global_'
+#   AWS_S3_GLOBAL_OBJECT_PATH   : The global object path to the tarball you want to upload, in the form of <path>/<to>/<tarball name>. Defaults to <repo name>/_global_/<commit>.tar.gz
 #   AWS_SQS_NAME           : The AWS SQS queue name to send messages to.
 #   AWS_DEFAULT_REGION     : The S3 region to upload your tarball.
 #   AWS_ACCESS_KEY_ID      : The aws access key id
@@ -86,14 +87,6 @@ _set_metadata() {
 EOF
 }
 
-# Creates a git tag and pushes it.
-_create_git_tag() {
-    git config --global user.email "alerts+travis@opengov.com"
-    git config --global user.name "og-travis"
-    git tag -a "$GIT_TAG_NAME" -m "Pull request: $TRAVIS_PULL_REQUEST -- Travis build number: $TRAVIS_BUILD_NUMBER"
-    git push origin "$GIT_TAG_NAME";
-}
-
 # Exits from current build if the commit has already been tarballed in the
 # master branch. Only checks in the given date in 'YEAR/MONTH' format.
 # Takes the following args:
@@ -123,13 +116,8 @@ _check_build_exists() {
         if [ "$?" -eq 0 ]; then
             set -e
             echo "Commit $TRAVIS_COMMIT has already been built. Copying from $branch to $TRAVIS_BRANCH, then exiting build.";
-            # aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH"
-            # aws s3 cp "s3://$AWS_S3_BUCKET/$s3_path" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
             aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_OBJECT_PATH"
             aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
-
-            # Create git tag
-            if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
 
             if [ -n "$dont_exit_if_build_exists" ]; then
                 # Export variable to let others know that the build already exists
@@ -142,6 +130,24 @@ _check_build_exists() {
         fi
         set -e
     done
+}
+
+# Checks if the global build exists and exit if it does
+_check_global_build_exists() {
+    set +e
+    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+    set -e
+
+    if [ "$?" -eq 0 ]; then
+        echo "Commit $TRAVIS_COMMIT has already been built.";
+
+        if [ -n "$dont_exit_if_build_exists" ]; then
+            # Export variable to let others know that the build already exists
+            export S3D_BUILD_EXISTS=1
+        else
+            exit 0;
+        fi
+    fi
 }
 
 ######################################
@@ -262,11 +268,14 @@ s3d_upload() {
         TARBALL_ETAG=`ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT]); puts resp['ETag'][1..-2]"`
 
         # Upadate latest tarball
-        # aws s3 cp "s3://$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" "s3://$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
         aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
 
-        # Create git tag
-        if [[ "$TRAVIS_BRANCH" =~ $TAG_ON ]]; then _create_git_tag; fi
+        # Copy to the global namespace and as its branch name. We will let the above still copy the builds into the old location while we migrate.
+        # Commit
+        aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+
+        # branch
+        aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_BRANCH.tar.gz"
     else
         echo 'Skipping build upload to S3'
     fi
@@ -288,7 +297,6 @@ s3d_initialize() {
     if [ -z "$GIT_REPO_NAME" ]; then export GIT_REPO_NAME="${ginfo[1]}"; fi
     if [ -z "$TARBALL_TARGET_PATH" ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z "$GIT_TAG_NAME" ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
-    if [ -z "$TAG_ON" ]; then export TAG_ON=^production$ ; fi
 
     if [ -z "$OCD_RELAY_URL" ]; then export OCD_RELAY_URL='https://relay.internal.opengov.com'; fi
 
@@ -299,7 +307,10 @@ s3d_initialize() {
             export AWS_S3_BUCKET=og-deployments-dev;
         fi
     fi
+
     if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR='_global_' fi
+    if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then export AWS_S3_GLOBAL_OBJECT_PATH=$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
@@ -325,7 +336,7 @@ s3d_initialize() {
         fi
 
         # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.10.11
+        pip install $user_mode $ignore_installed awscli==1.10.12
 
         # Update the path to access the aws executable
         if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
@@ -333,6 +344,7 @@ s3d_initialize() {
         dont_exit_if_build_exists=$1
         _check_build_exists $BUILD_DATE $dont_exit_if_build_exists # Current month
         _check_build_exists `date -u +%Y/%m --date '-1 month'` $dont_exit_if_build_exists # Previous month
+        _check_global_build_exists
     fi
     set +x
 }
