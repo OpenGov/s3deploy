@@ -309,7 +309,7 @@ s3d_initialize() {
     fi
 
     if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
-    if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR='_global_' fi
+    if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR='_global_'; fi
     if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then export AWS_S3_GLOBAL_OBJECT_PATH=$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
