@@ -135,10 +135,10 @@ _check_build_exists() {
 # Checks if the global build exists and exit if it does
 _check_global_build_exists() {
     set +e
-    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+    status=$(aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH")
     set -e
 
-    if [ "$?" -eq 0 ]; then
+    if [ "$status" -eq 0 ]; then
         echo "Commit $TRAVIS_COMMIT has already been built.";
 
         if [ -n "$dont_exit_if_build_exists" ]; then
