@@ -81,7 +81,7 @@ _set_metadata() {
   "branch": "$TRAVIS_BRANCH",
   "build": "$TRAVIS_BUILD_NUMBER",
   "pull_request": "$TRAVIS_PULL_REQUEST",
-  "s3_prefix_tarball": "$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
+  "s3_prefix_tarball": "$AWS_S3_BUCKET/$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR",
   "date": `date -u +%s`
 }
 EOF
