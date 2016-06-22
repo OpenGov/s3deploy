@@ -87,51 +87,6 @@ _set_metadata() {
 EOF
 }
 
-# Exits from current build if the commit has already been tarballed in the
-# master branch. Only checks in the given date in 'YEAR/MONTH' format.
-# Takes the following args:
-#    $1, date : The date to check in 'YEAR/MONTH' format. Required.
-#    $2, dont_exit_if_build_exists : Whether to continue the script or not if the build already exists. Defaults to false; can be set to any truthy value.
-#    $3, check_branches : Comma separated list of branches to check for pre existing builds. Defaults to master, staging, and production branches
-_check_build_exists() {
-    date=$1
-    dont_exit_if_build_exists=$2
-
-    # Leave function if build already exists
-    if [ -n "$S3D_BUILD_EXISTS" ]; then return; fi
-
-    if [ -z "$3" ]; then
-        check_branches=( 'master' 'staging' 'production' );
-    else
-        check_branches=(${2//,/ })
-    fi
-
-    for branch in "${check_branches[@]}"
-    do
-        s3_path="$GIT_REPO_NAME/$branch/$date/$TRAVIS_COMMIT.tar.gz"
-
-        set +e
-        aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$s3_path"
-
-        if [ "$?" -eq 0 ]; then
-            set -e
-            echo "Commit $TRAVIS_COMMIT has already been built. Copying from $branch to $TRAVIS_BRANCH, then exiting build.";
-            aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_OBJECT_PATH"
-            aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$s3_path" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$TRAVIS_BRANCH/latest.tar.gz"
-
-            if [ -n "$dont_exit_if_build_exists" ]; then
-                # Export variable to let others know that the build already exists
-                export S3D_BUILD_EXISTS=1
-                break
-
-            else
-                exit 0;
-            fi
-        fi
-        set -e
-    done
-}
-
 # Checks if the global build exists and exit if it does
 _check_global_build_exists() {
     set +e
@@ -175,64 +130,6 @@ s3d_sync() {
         aws s3 sync "${@:4:num_extra}" --acl "$acl" "$local_dir" "s3://$s3_path"
     fi
     set +x
-}
-
-# Causes a deploy to occur.
-# Send a message to AWS SQS directly if aws credentials available otherwise through the relay.
-# Parameters:
-#     s3d_send_sqs_msg <scm provider: (git|s3deploy)> <chef_app_attr> <custom url affix> <msg>
-#     s3d_send_sqs_msg s3deploy dapp
-#
-# The parameter order must be respected.
-s3d_deploy() {
-    scm=$1
-    chef_app_attr=$2
-    url_affix=$3
-    runlist=$4
-    msg=$5
-
-    if [ -z "$runlist" ]; then runlist='role[full-stack]'; fi
-    if [ -z "$scm" ]; then scm=s3deploy; fi
-    if [ -z "$msg" ]; then
-        msg=$(cat <<EOF
-{
-  "repo_url": "git@github.com:$TRAVIS_REPO_SLUG.git",
-  "repo_owner": "$GIT_REPO_OWNER",
-  "repo_name": "$GIT_REPO_NAME",
-  "repo_slug": "$TRAVIS_REPO_SLUG",
-  "revision": "$TRAVIS_COMMIT",
-  "branch": "$TRAVIS_BRANCH",
-  "build": "$TRAVIS_BUILD_NUMBER",
-  "pull_request": "$TRAVIS_PULL_REQUEST",
-  "s3_prefix_tarball": "$AWS_S3_BUCKET/$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE",
-  "hook_type": "travis",
-  "chef_app_attr": "$chef_app_attr",
-  "url_affix": "$url_affix",
-  "runlist": "$runlist",
-  "scm_provider": "$scm",
-  "date": `date -u +%s`
-}
-EOF
-)
-    fi
-
-    if [ "$TRAVIS_SECURE_ENV_VARS" = "true" ]; then
-        # Get the queue URL
-        SQS_URL=`ruby -e "require 'json'; resp = JSON.parse(%x[aws sqs get-queue-url --queue-name $AWS_SQS_NAME]); puts resp['QueueUrl']"`
-
-        # Send the message
-        aws sqs send-message --queue-url "$SQS_URL" --message-body "$msg"
-
-    else
-        # its ok if the message fails
-        set +e
-        if [ -z "$OCD_RELAY_USER" ] && [ -z "$OCD_RELAY_PW" ]; then
-            curl -X POST -H 'Content-Type: application/json' --data "$msg" --user "$OCD_RELAY_USER:$OCD_RELAY_PW" "$OCD_RELAY_URL/relay/hook"
-        else
-            curl -X POST -H 'Content-Type: application/json' --data "$msg" "$OCD_RELAY_URL/relay/hook"
-        fi
-        set -e
-    fi
 }
 
 # Mark paths to exclude from the tarball build. You should pass an
@@ -298,53 +195,38 @@ s3d_initialize() {
     if [ -z "$TARBALL_TARGET_PATH" ]; then export TARBALL_TARGET_PATH=/tmp/$GIT_REPO_NAME.tar.gz; fi
     if [ -z "$GIT_TAG_NAME" ]; then export GIT_TAG_NAME=$TRAVIS_BRANCH-`date -u +%Y-%m-%d-%H-%M`; fi
 
-    if [ -z "$OCD_RELAY_URL" ]; then export OCD_RELAY_URL='https://relay.internal.opengov.com'; fi
-
-    if [ -z "$AWS_S3_BUCKET" ]; then
-        if [[ $TRAVIS_SECURE_ENV_VARS == "true" ]]; then
-            export AWS_S3_BUCKET=og-deployments;
-        else
-            export AWS_S3_BUCKET=og-deployments-dev;
-        fi
-    fi
-
+    if [ -z "$AWS_S3_BUCKET" ]; then export AWS_S3_BUCKET=og-deployments; fi
     if [ -z "$AWS_S3_OBJECT_PATH" ]; then export AWS_S3_OBJECT_PATH=$GIT_REPO_NAME/$TRAVIS_BRANCH/$BUILD_DATE/$TRAVIS_COMMIT.tar.gz; fi
     if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR='_global_'; fi
     if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then export AWS_S3_GLOBAL_OBJECT_PATH=$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_COMMIT.tar.gz; fi
-    if [ -z "$AWS_SQS_NAME" ]; then export AWS_SQS_NAME=deployments-travis; fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 
-    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-        # we don't want to spew the secrets
-        set +x
-        if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
-        set -x
-
-        # Enable user install if virtualenv has not been activated
-        # The flag is unsupported in virtualenv since python packages
-        # are already installed in user owned paths.
-        # We also need to force reinstall the aws cli package if the project
-        # python based because if its caching the pip packages, its not caching
-        # the aws binary.
-        user_mode=''
-        ignore_installed=''
-        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then
-            user_mode='--user'
-        else
-            ignore_installed='--ignore-installed'
-        fi
-
-        # Install the aws cli tools
-        pip install $user_mode $ignore_installed awscli==1.10.12
-
-        # Update the path to access the aws executable
-        if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
-
-        dont_exit_if_build_exists=$1
-        _check_build_exists $BUILD_DATE $dont_exit_if_build_exists # Current month
-        _check_build_exists `date -u +%Y/%m --date '-1 month'` $dont_exit_if_build_exists # Previous month
-        _check_global_build_exists
-    fi
     set +x
+    # we don't want to spew the secrets
+    if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
+    set -x
+
+    # Enable user install if virtualenv has not been activated
+    # The flag is unsupported in virtualenv since python packages
+    # are already installed in user owned paths.
+    # We also need to force reinstall the aws cli package if the project
+    # python based because if its caching the pip packages, its not caching
+    # the aws binary.
+    user_mode=''
+    ignore_installed=''
+    if [ -z "$TRAVIS_PYTHON_VERSION" ]; then
+        user_mode='--user'
+    else
+        ignore_installed='--ignore-installed'
+    fi
+
+    # Install the aws cli tools
+    pip install $user_mode $ignore_installed awscli==1.10.39
+
+    # Update the path to access the aws executable
+    if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
+
+    dont_exit_if_build_exists=$1
+    _check_global_build_exists
 }
