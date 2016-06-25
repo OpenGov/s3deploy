@@ -152,8 +152,10 @@ s3d_upload() {
     # Upload to S3
     TARBALL_ETAG=$(ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_GLOBAL_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT,pull_request=$TRAVIS_PULL_REQUEST,date=`date -u --iso-8601=seconds`]); puts resp['ETag'][1..-2]")
 
-    # Copy to the global namespace as its branch name.
-    aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_GLOBAL_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_BRANCH.tar.gz"
+    # Copy to the global namespace as its branch name only if its not a pull request or not master, staging, and production branch.
+    if [ "$TRAVIS_PULL_REQUEST" = 'false' ] || ([ "$TRAVIS_BRANCH" != 'master' ] && [ "$TRAVIS_BRANCH" != 'staging' ] && [ "$TRAVIS_BRANCH" != 'production' ]); then
+        aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_GLOBAL_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_BRANCH.tar.gz"
+    fi
 }
 
 # Initializes necessary environment variables and checks if build exists.
