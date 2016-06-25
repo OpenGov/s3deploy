@@ -103,6 +103,8 @@ _check_global_build_exists() {
         else
             exit 0;
         fi
+    else
+        echo "Build at 's3://$$AWS_S3_BUCKET/$AWS_S3_GLOBAL_OBJECT_PATH' does not exist, continuing"
     fi
 }
 
