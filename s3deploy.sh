@@ -90,7 +90,8 @@ EOF
 # Checks if the global build exists and exit if it does
 _check_global_build_exists() {
     set +e
-    status=$(aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH")
+    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+    status=$?
     set -e
 
     if [ "$status" -eq 0 ]; then
