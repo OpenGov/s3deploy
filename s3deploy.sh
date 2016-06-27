@@ -140,8 +140,8 @@ s3d_exclude_paths() {
 }
 
 # Uploads the build tarball to s3, under the paths:
-# s3://og-deployments/$GIT_REPO_NAME/_global/$TRAVIS_COMMIT.tar.gz
-# s3://og-deployments/$GIT_REPO_NAME/_global/$TRAVIS_BRANCH.tar.gz
+# s3://og-deployments/$GIT_REPO_NAME/_global_/$TRAVIS_COMMIT.tar.gz
+# s3://og-deployments/$GIT_REPO_NAME/_global_/$TRAVIS_BRANCH.tar.gz
 s3d_upload() {
     cd $TRAVIS_BUILD_DIR
     _set_metadata
