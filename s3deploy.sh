@@ -80,11 +80,11 @@ EOF
 # Checks if the global build exists and exit if it does
 _check_global_build_exists() {
     set +e
-    aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$AWS_S3_GLOBAL_OBJECT_PATH"
+    revision=$(ruby -r 'json' -e "resp = JSON.parse(%x[aws s3api head-object --bucket $AWS_S3_BUCKET --key $AWS_S3_GLOBAL_OBJECT_PATH]); puts resp['Metadata']['revision']")
     status=$?
     set -e
 
-    if [ "$status" -eq 0 ]; then
+    if [ "$status" = 0 ] && [ "$revision" = "$TRAVIS_COMMIT" ] ; then
         echo "Commit $TRAVIS_COMMIT has already been built.";
 
         if [ -n "$dont_exit_if_build_exists" ]; then
@@ -152,8 +152,8 @@ s3d_upload() {
     # Upload to S3
     TARBALL_ETAG=$(ruby -e "require 'json'; resp = JSON.parse(%x[aws s3api put-object --acl private --bucket $AWS_S3_BUCKET --key $AWS_S3_GLOBAL_OBJECT_PATH --body $TARBALL_TARGET_PATH --metadata revision=$TRAVIS_COMMIT,pull_request=$TRAVIS_PULL_REQUEST,date=`date -u --iso-8601=seconds`]); puts resp['ETag'][1..-2]")
 
-    # Copy to the global namespace as its branch name only if its not a pull request or not master, staging, and production branch.
-    if [ "$TRAVIS_PULL_REQUEST" = 'false' ] || ([ "$TRAVIS_BRANCH" != 'master' ] && [ "$TRAVIS_BRANCH" != 'staging' ] && [ "$TRAVIS_BRANCH" != 'production' ]); then
+    # Copy to the global namespace as its branch name only if its not a pull request
+    if [ "$TRAVIS_PULL_REQUEST" = 'false' ]; then
         aws s3api copy-object --metadata-directive COPY --copy-source "$AWS_S3_BUCKET/$AWS_S3_GLOBAL_OBJECT_PATH" --bucket "$AWS_S3_BUCKET" --key "$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_BRANCH.tar.gz"
     fi
 }
@@ -173,7 +173,16 @@ s3d_initialize() {
 
     if [ -z "$AWS_S3_BUCKET" ]; then export AWS_S3_BUCKET=og-deployments; fi
     if [ -z "$AWS_S3_GLOBAL_NAMESPACE_DIR" ]; then export AWS_S3_GLOBAL_NAMESPACE_DIR='_global_'; fi
-    if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then export AWS_S3_GLOBAL_OBJECT_PATH=$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR/$TRAVIS_COMMIT.tar.gz; fi
+    if [ -z "$AWS_S3_GLOBAL_OBJECT_PATH" ]; then
+        prefix="$GIT_REPO_NAME/$AWS_S3_GLOBAL_NAMESPACE_DIR"
+        if [ "$TRAVIS_PULL_REQUEST" = 'false' ]; then
+            # for merge builds
+            export AWS_S3_GLOBAL_OBJECT_PATH="$prefix/$TRAVIS_COMMIT.tar.gz";
+        else
+            # for pull request builds
+            export AWS_S3_GLOBAL_OBJECT_PATH="$prefix/pr-$TRAVIS_PULL_REQUEST.tar.gz";
+        fi
+    fi
     if [ -z "$AWS_DEFAULT_REGION" ]; then export AWS_DEFAULT_REGION=us-east-1; fi
     if [ -z "$AWS_ACCESS_KEY_ID" ]; then echo "AWS_ACCESS_KEY_ID not set"; exit 1; fi
 
@@ -197,7 +206,7 @@ s3d_initialize() {
     fi
 
     # Install the aws cli tools
-    pip install $user_mode $ignore_installed awscli==1.10.41
+    pip install $user_mode $ignore_installed awscli==1.10.44
 
     # Update the path to access the aws executable
     if [ -z "$TRAVIS_PYTHON_VERSION" ]; then export PATH="$HOME/.local/bin/:$PATH"; fi
