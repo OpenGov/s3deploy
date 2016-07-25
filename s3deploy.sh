@@ -102,6 +102,23 @@ _check_global_build_exists() {
 ########## Public Functions ##########
 ######################################
 
+# Check if the file names in the build folder are fingerprinted
+# Parameters:
+#     check_fingerprints <local_directory>
+#
+# Example:
+# check_fingerprints build/public
+check_fingerprints() {
+    if [ ! "$#" -ne 1 ]; then echo "check_fingerprints requires exactly 1 parameter; $# parameters given"; exit 1; fi
+    local_dir=$1
+    GLOBIGNORE="*.json"
+    for file_name in "$local_dir"/* do
+        normalize_file_name=${file_name#$local_dir/}
+        status=$(echo "$normalize_file_name" | grep -E "^(.*?\.)?[a-fA-F0-9]{20,124}(\.[a-z0-9]+)+$")
+        [ ! $status ] && exit 1
+    done
+}
+
 # Syncs a directory to s3. By default the files synced are set to private read only.
 # Parameters:
 #     s3d_sync <local_directory> <s3_path> <permissions> <custom flags>
