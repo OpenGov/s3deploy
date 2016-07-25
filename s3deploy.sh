@@ -112,7 +112,7 @@ s3d_check_fingerprints() {
     if [ ! "$#" -ne 1 ]; then echo "check_fingerprints requires exactly 1 parameter; $# parameters given"; exit 1; fi
     local_dir=$1
     GLOBIGNORE="*.json"
-    for file_name in "$local_dir"/* do
+    for file_name in "$local_dir"/*; do
         normalize_file_name=$(basename "$file_name")
         status=$(echo "$normalize_file_name" | grep -E "^(.*?\.)?[a-fA-F0-9]{20,124}(\.[a-z0-9]+)+$")
         if [ "$status" = "" ]; then
