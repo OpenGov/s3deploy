@@ -113,7 +113,7 @@ s3d_check_fingerprints() {
     local_dir=$1
     GLOBIGNORE="*.json"
     for file_name in "$local_dir"/* do
-        normalize_file_name=$(echo $file_name | sed "s/.*\///")
+        normalize_file_name=$(basename "$file_name")
         status=$(echo "$normalize_file_name" | grep -E "^(.*?\.)?[a-fA-F0-9]{20,124}(\.[a-z0-9]+)+$")
         if [ "$status" = "" ]; then
             echo "Error: $normalize_file_name is not fingerprinted. Please check!"
