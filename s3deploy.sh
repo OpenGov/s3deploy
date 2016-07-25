@@ -115,7 +115,10 @@ check_fingerprints() {
     for file_name in "$local_dir"/* do
         normalize_file_name=${file_name#$local_dir/}
         status=$(echo "$normalize_file_name" | grep -E "^(.*?\.)?[a-fA-F0-9]{20,124}(\.[a-z0-9]+)+$")
-        [ ! $status ] && exit 1
+        if [ ! $status ]; then
+            echo "Error: $normalize_file_name is not fingerprinted. Please check!"
+            exit 1
+        fi
     done
 }
 
