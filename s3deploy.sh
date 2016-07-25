@@ -109,7 +109,7 @@ _check_global_build_exists() {
 # Example:
 # s3d_check_fingerprints build/public
 s3d_check_fingerprints() {
-    if [ ! "$#" -ne 1 ]; then echo "check_fingerprints requires exactly 1 parameter; $# parameters given"; exit 1; fi
+    if [ ! $# -eq 1 ]; then echo "check_fingerprints requires exactly 1 parameter; $# parameters given"; exit 1; fi
     local_dir=$1
     GLOBIGNORE="*.json"
     for file_name in "$local_dir"/*; do
