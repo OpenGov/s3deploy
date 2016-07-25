@@ -104,18 +104,18 @@ _check_global_build_exists() {
 
 # Check if the file names in the build folder are fingerprinted
 # Parameters:
-#     check_fingerprints <local_directory>
+#     s3d_check_fingerprints <local_directory>
 #
 # Example:
-# check_fingerprints build/public
-check_fingerprints() {
+# s3d_check_fingerprints build/public
+s3d_check_fingerprints() {
     if [ ! "$#" -ne 1 ]; then echo "check_fingerprints requires exactly 1 parameter; $# parameters given"; exit 1; fi
     local_dir=$1
     GLOBIGNORE="*.json"
     for file_name in "$local_dir"/* do
-        normalize_file_name=${file_name#$local_dir/}
+        normalize_file_name="${file_name#$local_dir/}"
         status=$(echo "$normalize_file_name" | grep -E "^(.*?\.)?[a-fA-F0-9]{20,124}(\.[a-z0-9]+)+$")
-        if [ ! $status ]; then
+        if [ "$status" = "0" ]; then
             echo "Error: $normalize_file_name is not fingerprinted. Please check!"
             exit 1
         fi
