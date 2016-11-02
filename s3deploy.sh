@@ -208,7 +208,7 @@ s3d_initialize() {
 
     set +x
     # we don't want to spew the secrets
-    if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 1; fi
+    if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then echo "AWS_SECRET_ACCESS_KEY not set"; exit 0; fi
     set -x
 
     # Enable user install if virtualenv has not been activated
